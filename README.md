@@ -4,7 +4,9 @@ LastChaos Client Downloader programmed in Lua.<br/>
 Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autoplay Media Studio 8.5.3.0</a>
 
 # QuickStart
-1) Execute Compile SFX.bat and follow the steps.
+1) Take your game client files and compress it with WinRAR in zip format, using the best compression method.
+__Compile__
+1) Execute "Compile SFX.bat" and follow the steps.
 
 # Features
 * Make Shortcut on Desktop.
