@@ -14,6 +14,7 @@ Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autop
 * Make Uninstall process.
 * 
 # Information
+The downloader application is precompiled, the bat file is responsible for creating the configuration file and creating a final SFX.
 
 # Pics
 ![LastChaos Downloader](https://user-images.githubusercontent.com/5092697/140783588-3a412c26-8c24-4218-a837-30e53980bdc4.png)
