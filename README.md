@@ -13,7 +13,7 @@ Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autop
 * Make Shortcut on Start Menu.
 * Make Entry on RegEdit.
 * Make Uninstall process.
-* 
+
 # Information
 The downloader application is precompiled, the bat file is responsible for creating the configuration file and creating a final SFX.
 
