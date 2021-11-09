@@ -4,6 +4,11 @@ LastChaos Client Downloader programmed in Lua.<br/>
 Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autoplay Media Studio 8.5.3.0</a>
 
 # Features
+* Make Shortcut on Desktop.
+* Make shortcut on Start Menu.
+* Make Entry on RegEdit.
+* Make Uninstall process.
+* 
 # Information
 
 # Pics
