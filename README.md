@@ -3,7 +3,7 @@
 LastChaos Client Downloader programmed in Lua.<br/>
 Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autoplay Media Studio 8.5.3.0</a>
 
-#QuickStart
+# QuickStart
 1) Execute Compile SFX.bat and follow the steps.
 
 # Features
