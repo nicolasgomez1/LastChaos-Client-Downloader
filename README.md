@@ -18,11 +18,9 @@ Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autop
 The downloader application is precompiled, the bat file is responsible for creating the configuration file and creating a final SFX.
 
 __Compiler__
-"Enter Client Download URL: " here you must enter the web address to your client file. (Example http://127.0.0.1/myclient.zip).
-"Enter Server Name: " here you must enter the name you want them to have: the shortcut on the desktop, the name of the default installation folder, the name of the folder in the start menu and something that I sure don't remember. (Example My Server Name 123).
-"Enter Website Link: " & "Enter Help Website Link: " These are parameters without much importance, simply links that you want to appear in the information of "programs & features".
- 
- 
+"Enter Client Download URL: " here you must enter the web address to your client file. (Example http://127.0.0.1/myclient.zip)<br/>
+"Enter Server Name: " here you must enter the name you want them to have: the shortcut on the desktop, the name of the default installation folder, the name of the folder in the start menu and something that I sure don't remember. (Example My Server Name 123)<br/>
+"Enter Website Link: " & "Enter Help Website Link: " These are parameters without much importance, simply links that you want to appear in the information of "programs & features"<br/>
 
 # Pics
 ![LastChaos Downloader](https://user-images.githubusercontent.com/5092697/140783588-3a412c26-8c24-4218-a837-30e53980bdc4.png)
