@@ -5,7 +5,7 @@ Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autop
 
 # QuickStart
 1) Take your game client files and compress it with WinRAR in zip format, using the best compression method.
-2) Execute "Compile SFX.bat" and follow the steps.
+2) Execute __Compile SFX.bat__ and follow the steps.
 
 # Features
 * Make Shortcut on Desktop.
