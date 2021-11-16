@@ -71,14 +71,15 @@ function GetConfig(Section, Value)
 	return INIFile.GetValue(SettingsFile, Section, Value);
 end
 
-ClientURL = GetConfig("Settings", "ClientLink");
-ServerName = GetConfig("Settings", "ServerName");
-URLInfoAbout = GetConfig("Settings", "URLInfoAbout");
-HelpLink = GetConfig("Settings", "HelpLink");
-CreateDesktopIcon = (true);
-CreateStartMenuIcon = (true);
+ClientURL					= GetConfig("Settings", "ClientLink");
+ServerName					= GetConfig("Settings", "ServerName");
+URLInfoAbout				= GetConfig("Settings", "URLInfoAbout");
+HelpLink					= GetConfig("Settings", "HelpLink");
+CreateDesktopIcon			= (true);
+CreateStartMenuIcon			= (true);
 LaunchGameAfterInstallation = (true);
-InstallFolder = ("");
+InstallFolder				= ("");
+Cancel						= (false);
 
 function TestConnection(sURL, nTimeout)
 	if(nTimeout and type(nTimeout) == "number")then
@@ -108,21 +109,14 @@ function GetSizeCheckMethod(Url)
 	end
 end
 
-function DownloadCheckMethod(Url, Path)
-	if(String.Left(Url, 5) == "https")then
-		HTTP.DownloadSecure(Url, Path, MODE_BINARY, 1, 443, nil, nil, DownloadCallback);
-	else
-		HTTP.Download(Url, Path, MODE_BINARY, 1, 80, nil, nil, DownloadCallback);
-	end
-end
-
 function UpdateStatus(Status, Percent)
 	if(Status == "Completed")then
 		Paragraph.SetText("stage2_downloadstatus", "Download Completed!");
-		Image.SetSize("stage2_progressbar", 541, 42);
+		Image.Load("progressbar", DLL.CallFunction("AutoPlay\\Scripts\\ImageEdit.dll", "Crop", "\"".._SourceFolder.."\\AutoPlay\\Images\\progressbar.png".."\""..",0,0,"..(550)..",50", DLL_RETURN_TYPE_STRING, DLL_CALL_STDCALL));
+		Image.SetSize("progressbar", 550, 50);
 
 		TaskBarList.SetProgressState(TBPF_NOPROGRESS);
-		--TaskBarList.SetOverlayIconFromLoadFile(LR_SHARED, "", 0);--######################podria refinar un poco el codigo del launcher, desactivar esto que creo que era cuando usaba un icono de update rotatorio en la barra de tareas, y sacar la llamada a socket que no es necesaria, tambien poner un windows.close(terminate) en los fatal error que haya antes de que se muestre la ventana, si es que los hay. en settings podria poner pausa musica.
+		TaskBarList.SetOverlayIcon(nil);
 	elseif(Status == "Error")then
 		Paragraph.SetText("stage2_downloadstatus", "Download stopped!");
 		
@@ -133,65 +127,28 @@ function UpdateStatus(Status, Percent)
 	end
 end
 
-function QueryAllowProjectClose()
-	Cancel = (true);
-	return true;
-end
-
-function UninstallCallback(Source, Deleted, Total)
-	Paragraph.SetText("FileList", Paragraph.GetText("FileList").."\r\n"..Source);
-	
-	Paragraph.SetText("stage2_percentage", (Deleted/Total*100).."%");
-	
-	Image.SetSize("stage2_progressbar", Total-Deleted*541/100, 42);
-	
-	if(Deleted == Total)then
-		return false;
-	else
-		return true;
-	end
-end
-
-function ZipCallback(DestinationPath, Percentage, Status)
-	if(Status == ZIP_STATUS_MAJOR)then
-		if(Cancel == true)then
-			return false;
-		end
-		
+function ZipCallback(FilePath, Percentage, Status)
+	if(Status == ZipEx.GENERAL)then
+		if(Cancel == true)then	return false;	end
 		Paragraph.SetText("stage2_percentage", Percentage.."%");
 		
-		Image.SetSize("stage2_progressbar", Percentage*541/100, 42);
+		Image.Load("progressbar", DLL.CallFunction("AutoPlay\\Scripts\\ImageEdit.dll", "Crop", "\"".._SourceFolder.."\\AutoPlay\\Images\\progressbar.png".."\""..",0,0,"..(Percentage*550/100)..",50", DLL_RETURN_TYPE_STRING, DLL_CALL_STDCALL));
+		Image.SetSize("progressbar", Percentage*550/100, 50);
 		
 		TaskBarList.SetProgressValue(Percentage, 100);
+	else
+		if(Cancel == true)then	return false;	end
+		Application.Sleep(0.01);
+		
+		Paragraph.SetText("stage2_downloadstatus", "Unzipping File: "..FilePath.." ("..Percentage.."%)");
 	end
 	
-	if(Status == ZIP_STATUS_MINOR)then
-		Application.Sleep(.01);
-		
-		if(Cancel == true)then
-			return false;
-		end
-		
-		local Split = String.SplitPath(DestinationPath);
-		Paragraph.SetText("stage2_downloadstatus", "Unzipping File: "..Split.Filename..Split.Extension.." ("..Percentage.."%)");
-	end
+	Application.SetRedraw(true);
 	
 	if(Cancel == true)then
 		return false;
-	end
-	
-	return true;
-end
-
-function SecondsToClock(sSeconds)
-	local nSeconds = String.ToNumber(sSeconds)
-	if(nSeconds == 0)then
-		return "00 Hours 00 Minutes 00 Seconds";
 	else
-		local nHours = string.format("%02.f", Math.Floor(nSeconds/3600));
-		local nMins = string.format("%02.f", Math.Floor(nSeconds/60 - (nHours*60)));
-		local nSecs = string.format("%02.f", Math.Floor(nSeconds - nHours*3600 - nMins *60));
-		return nHours.." Hours "..nMins.." Minutes "..nSecs.." Seconds";
+		return true;
 	end
 end
 
@@ -200,38 +157,41 @@ function DownloadCallback(Downloaded, Total, TransferRate, SecondLeft, SecondsLe
 		local Percent = Math.Floor(Downloaded/Total*100);
 		
 		Paragraph.SetText("stage2_percentage", Percent.."%");
-
-		Image.SetSize("stage2_progressbar", Percent*541/100, 42);
 		
-		Paragraph.SetText("stage2_downloadstatus", string.format("REMAINING: %s  %s (%s/s)", SecondsToClock(SecondLeft), String.GetFormattedSize(Total-Downloaded, FMTSIZE_AUTOMATIC, false), String.GetFormattedSize(TransferRate*1024, FMTSIZE_AUTOMATIC, true)));
+		Image.Load("progressbar", DLL.CallFunction("AutoPlay\\Scripts\\ImageEdit.dll", "Crop", "\"".._SourceFolder.."\\AutoPlay\\Images\\progressbar.png".."\""..",0,0,"..(Percent*550/100)..",50", DLL_RETURN_TYPE_STRING, DLL_CALL_STDCALL));
+		Image.SetSize("progressbar", Percent*550/100, 50);
+		
+		Paragraph.SetText("stage2_downloadstatus", string.format("REMAINING: %s  %s (%s/s)", os.date("%M Minutes %S Seconds", SecondLeft), String.GetFormattedSize(Total-Downloaded, FMTSIZE_AUTOMATIC, false), String.GetFormattedSize(TransferRate*1024, FMTSIZE_AUTOMATIC, true)));
 		
 		TaskBarList.SetProgressValue(Percent, 100);
 	end
 	
 	if(Cancel == true)then
 		return false;
+	else
+		return true;
 	end
-	
-	return true;
 end
 
-function Transparency(Page)
-	local WS_EX_LAYERED = (524288);
-	local msg = DLL.CallFunction(_SystemFolder.."\\user32.dll", "GetWindowLongA", Application.GetWndHandle()..", -20", DLL_RETURN_TYPE_LONG, DLL_CALL_STDCALL);
-	msg = (msg + WS_EX_LAYERED);
-	DLL.CallFunction(_SystemFolder.."\\user32.dll", "SetWindowLongA", Application.GetWndHandle()..", -20, "..msg, DLL_RETURN_TYPE_LONG, DLL_CALL_STDCALL);
-	DLL.CallFunction(_SystemFolder.."\\user32.dll", "SetLayeredWindowAttributes", Application.GetWndHandle()..", "..Application.GetPageProperties(Page).BackgroundColor..", 255, 3", DLL_RETURN_TYPE_LONG, DLL_CALL_STDCALL);
+function Transparency()
+	DLL.CallFunction(_SystemFolder.."\\user32.dll", "SetWindowLongA", Application.GetWndHandle()..", -20, "..DLL.CallFunction(_SystemFolder.."\\user32.dll", "GetWindowLongA", Application.GetWndHandle()..", -20", DLL_RETURN_TYPE_LONG, DLL_CALL_STDCALL)+524288, DLL_RETURN_TYPE_LONG, DLL_CALL_STDCALL);
+	DLL.CallFunction(_SystemFolder.."\\user32.dll", "SetLayeredWindowAttributes", Application.GetWndHandle()..", "..Application.GetPageProperties(Application.GetCurrentPage()).BackgroundColor..", 255, 3", DLL_RETURN_TYPE_LONG, DLL_CALL_STDCALL);
+end
+
+function QueryAllowProjectClose()
+	Cancel = (true);
+	Window.Close(Application.GetWndHandle(), CLOSEWND_TERMINATE);
 end</Script>
 <BookMarks count="0">
 </BookMarks>
-<DesignCodeLine>65</DesignCodeLine>
-<DesignCodeCol>5</DesignCodeCol>
+<DesignCodeLine>66</DesignCodeLine>
+<DesignCodeCol>42</DesignCodeCol>
 </Globals>
 <Defaults>
 <StartupPage>_PageFirst</StartupPage>
 <MouseOverSoundDefault>AutoPlay\Audio\High1.ogg</MouseOverSoundDefault>
 <MouseClickSoundDefault>AutoPlay\Audio\Click1.ogg</MouseClickSoundDefault>
-<MemMngMethod>0</MemMngMethod>
+<MemMngMethod>1</MemMngMethod>
 <UserPrivilegeLevel>2</UserPrivilegeLevel>
 </Defaults>
 <TargetMedia>
@@ -341,7 +301,7 @@ end</Script>
 <ReplaceIcon>1</ReplaceIcon>
 <IconFilename>AutoPlay\Icons\32x32.ico</IconFilename>
 <ReplaceVersionInfo>1</ReplaceVersionInfo>
-<FileVer1>1</FileVer1>
+<FileVer1>4</FileVer1>
 <FileVer2>0</FileVer2>
 <FileVer3>0</FileVer3>
 <FileVer4>0</FileVer4>
@@ -351,11 +311,11 @@ end</Script>
 <ProductVer4>0</ProductVer4>
 <Comments>Created with AutoPlay Media Studio</Comments>
 <Company>NicolasG</Company>
-<FileDescription>LastChaos Downloader</FileDescription>
+<FileDescription>LastChaos Installer</FileDescription>
 <LegalCopyright/>
 <LegalTrademarks/>
 <PrivateBuild/>
-<ProductName>LastChaos Downloader</ProductName>
+<ProductName>LastChaos Installer</ProductName>
 <SpecialBuild/>
 </EXEResourceInfo>
 <HGuidelines/>
@@ -424,7 +384,7 @@ end</Script>
 <Description/>
 <Keywords/>
 <Background>
-<Type>0</Type>
+<Type>2</Type>
 <ImageStyle>0</ImageStyle>
 <TopColor>16711680</TopColor>
 <BottomColor>16711935</BottomColor>
@@ -441,7 +401,7 @@ end</Script>
 <Script>Window.SetSize(Application.GetWndHandle(), 898, 535);
 Window.SetPos(Application.GetWndHandle(), Window.GetPos(Application.GetWndHandle()).X, System.GetDisplayInfo().Height / 2 - Window.GetSize(Application.GetWndHandle()).Height / 2);
 
-Transparency("DownloadAndInstall");
+Transparency();
 
 if(TestConnection(ClientURL, 3) == true)then
 	Paragraph.SetText("stage1_information", ".Net Framework: 4.8 or later Required disc space: "..String.GetFormattedSize(GetSizeCheckMethod(ClientURL), FMTSIZE_AUTOMATIC, true).." Free disc space: "..String.GetFormattedSize(Math.Floor(Drive.GetFreeSpace(_SourceDrive)*1024*1048576/1024), FMTSIZE_AUTOMATIC, false));
@@ -455,7 +415,7 @@ end</Script>
 <TreeState>0</TreeState>
 </TreeStates>
 <DesignCodeLine>3</DesignCodeLine>
-<DesignCodeCol>32</DesignCodeCol>
+<DesignCodeCol>13</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -605,7 +565,7 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 <Type>3</Type>
 <Name>progressbar_background</Name>
 <VisibleAtDesignTime>1</VisibleAtDesignTime>
-<VisibleAtRunTime>1</VisibleAtRunTime>
+<VisibleAtRunTime>0</VisibleAtRunTime>
 <Locked>0</Locked>
 <Enabled>1</Enabled>
 <ToolTip/>
@@ -616,10 +576,10 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 <TabIndex>-1</TabIndex>
 <AutoResize>0</AutoResize>
 <Coordinates>
-<Top>456</Top>
+<Top>448</Top>
 <Bottom>498</Bottom>
-<Left>228</Left>
-<Right>769</Right>
+<Left>215</Left>
+<Right>765</Right>
 </Coordinates>
 <Ratios>
 <WidthRatio>-1.000000</WidthRatio>
@@ -708,23 +668,23 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 </Object>
 <Object>
 <Type>3</Type>
-<Name>stage2_progressbar</Name>
+<Name>progressbar</Name>
 <VisibleAtDesignTime>1</VisibleAtDesignTime>
-<VisibleAtRunTime>1</VisibleAtRunTime>
+<VisibleAtRunTime>0</VisibleAtRunTime>
 <Locked>0</Locked>
 <Enabled>1</Enabled>
 <ToolTip/>
 <Cursor>0</Cursor>
 <Group>0</Group>
-<MaintainAspectRatio>0</MaintainAspectRatio>
+<MaintainAspectRatio>1</MaintainAspectRatio>
 <Pin>0</Pin>
 <TabIndex>-1</TabIndex>
 <AutoResize>0</AutoResize>
 <Coordinates>
-<Top>462</Top>
-<Bottom>504</Bottom>
-<Left>227</Left>
-<Right>228</Right>
+<Top>448</Top>
+<Bottom>498</Bottom>
+<Left>215</Left>
+<Right>215</Right>
 </Coordinates>
 <Ratios>
 <WidthRatio>-1.000000</WidthRatio>
@@ -739,8 +699,8 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>0</DesignCodeCol>
+<DesignCodeLine>1635020399</DesignCodeLine>
+<DesignCodeCol>7957612</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -753,8 +713,8 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>1875</DesignCodeCol>
+<DesignCodeLine>1651077746</DesignCodeLine>
+<DesignCodeCol>4128865</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -781,111 +741,6 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>29360134</DesignCodeLine>
-<DesignCodeCol>524290</DesignCodeCol>
-<BookMarks count="0">
-</BookMarks>
-</Event>
-<Actions>
-<Action>
-<Type>0</Type>
-<Name>None</Name>
-<Exit>0</Exit>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
-</Action>
-</Actions>
-<NormalImage>
-<Filename>AutoPlay\Images\progressbar.png</Filename>
-<UseTransColor>0</UseTransColor>
-<TransClr>16777215</TransClr>
-<TransTolerance>10</TransTolerance>
-<Opacity>100</Opacity>
-<HTMode>0</HTMode>
-</NormalImage>
-<MouseOverSndMode>0</MouseOverSndMode>
-<MouseOverSound/>
-<MouseClickSndMode>0</MouseClickSndMode>
-<MouseClickSound/>
-</Object>
-<Object>
-<Type>3</Type>
-<Name>background</Name>
-<VisibleAtDesignTime>1</VisibleAtDesignTime>
-<VisibleAtRunTime>1</VisibleAtRunTime>
-<Locked>1</Locked>
-<Enabled>0</Enabled>
-<ToolTip/>
-<Cursor>0</Cursor>
-<Group>0</Group>
-<MaintainAspectRatio>1</MaintainAspectRatio>
-<Pin>0</Pin>
-<TabIndex>-1</TabIndex>
-<AutoResize>0</AutoResize>
-<Coordinates>
-<Top>0</Top>
-<Bottom>535</Bottom>
-<Left>0</Left>
-<Right>898</Right>
-</Coordinates>
-<Ratios>
-<WidthRatio>-1.000000</WidthRatio>
-<HeightRatio>-1.000000</HeightRatio>
-</Ratios>
-<Event>
-<Name>On Click</Name>
-<Args/>
-<Script/>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
-<DesignCodeLine>1702363136</DesignCodeLine>
-<DesignCodeCol>0</DesignCodeCol>
-<BookMarks count="0">
-</BookMarks>
-</Event>
-<Event>
-<Name>On Right-Click</Name>
-<Args/>
-<Script/>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
-<DesignCodeLine>1802398766</DesignCodeLine>
-<DesignCodeCol>0</DesignCodeCol>
-<BookMarks count="0">
-</BookMarks>
-</Event>
-<Event>
-<Name>On Enter</Name>
-<Args/>
-<Script/>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
-<DesignCodeLine>4079360</DesignCodeLine>
-<DesignCodeCol>0</DesignCodeCol>
-<BookMarks count="0">
-</BookMarks>
-</Event>
-<Event>
-<Name>On Leave</Name>
-<Args/>
-<Script/>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
 <DesignCodeLine>0</DesignCodeLine>
 <DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
@@ -904,7 +759,7 @@ Input.SetText("stage1_input", InstallFolder);</Script>
 </Action>
 </Actions>
 <NormalImage>
-<Filename>AutoPlay\Images\background_0.png</Filename>
+<Filename>AutoPlay\Images\progressbar.png</Filename>
 <UseTransColor>0</UseTransColor>
 <TransClr>16777215</TransClr>
 <TransTolerance>10</TransTolerance>
@@ -976,8 +831,9 @@ if(State == "NEXT")then
 		Button.SetVisible("stage1_launchgameafterinstallation", false);
 		Paragraph.SetVisible("stage1_launchgameafterinstallationtext", false);
 		
-		Image.Load("background", "AutoPlay\\Images\\background_1.png");
 		Paragraph.SetVisible("stage2_percentage", true);
+		Image.SetVisible("progressbar_background", true);
+		Image.SetVisible("progressbar", true);
 		Paragraph.SetVisible("stage2_downloadstatus", true);
 		
 		Button.SetText(this, "CANCEL");
@@ -988,107 +844,21 @@ if(State == "NEXT")then
 			UpdateStatus("Error");
 			Dialog.Message("FATAL ERROR", _tblErrorMessages[DownloadError].."\r\nCannot continue, download canceled.", MB_OK, MB_ICONSTOP, MB_DEFBUTTON1);
 			Application.Exit(0);
-		elseif(DownloadError == 2508 or DownloadError == 1027)then
+		elseif(DownloadError == 2508 or DownloadError == 1027)then--Aborted By User
 			Application.Exit(0);
 		else
-			--local Start = (os.clock());
-			UpdateStatus("Please Wait...");
-			ZipEx.Extract(InstallFolder.."temp.zip", { "*.*" }, InstallFolder, "", "ZipCallback");
-			local ZipError = Application.GetLastError();
-			if(ZipError ~= 0 and ZipError ~= 1027)then
-				UpdateStatus("Error");
-				Dialog.Message("FATAL ERROR", _tblErrorMessages[ZipError].."\r\nCannot continue, download canceled.", MB_OK, MB_ICONSTOP, MB_DEFBUTTON1);
-				Application.Exit(0);
-			elseif(ZipError == 1027)then
-				Application.Exit(0);
-			else
-				--Dialog.Message("PROCESS FINISHED", "Process took:"..os.date("%M:%S", os.clock()-Start), MB_OK, MB_ICONNONE, MB_DEFBUTTON1);
-				UpdateStatus("Deleting residue...");
-				File.Delete(InstallFolder.."temp.zip", false, false, false, nil);
-				
-				if(File.DoesExist(InstallFolder.."LC.exe"))then
-					if(CreateDesktopIcon)then
-						UpdateStatus("Creating icon on desktop...");
-						Shell.CreateShortcut(Shell.GetFolder(SHF_DESKTOP), ServerName, InstallFolder.."LC.exe", "", "", "", 0, SW_SHOWNORMAL, nil, "", START_OPTION_NO_PIN);
-					end
-					
-					if(CreateStartMenuIcon)then
-						UpdateStatus("Creating icon on start menu...");
-						Shell.CreateShortcut(Shell.GetFolder(SHF_STARTMENU).."\\"..ServerName, ServerName, InstallFolder.."LC.exe", "", "", "", 0, SW_SHOWNORMAL, nil, "", START_OPTION_DEFAULT);
-					end
-				end
-				
-				local RegKey = ("SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"..ServerName);
-				
-				UpdateStatus("Creating Uninstall process...");
-				TextFile.WriteFromString(InstallFolder.."Uninstall.bat", [[
-					@echo off
-					title ]]..ServerName..[[ Uninstaller
-					echo Stopping LC.exe...
-					taskkill /f /im LC.exe
-					
-					echo Stopping Nksp.exe...
-					taskkill /f /im Nksp.exe
-					
-					echo Removing game client files...
-					set ClientFolder=%~dp0
-					
-					cd /d %ClientFolder%
-					
-					for /F "delims=" %%i in ('dir /b') do (
-						if not "%%i"=="Uninstall.bat" (
-							rd "%%i" /s /q || del "%%i" /s /q
-							echo Deleting: %%i
-						)
-					)
-					
-					echo Removing Shortcut from Desktop...
-					del /s /q "%USERPROFILE%\Desktop\]]..ServerName..[[.lnk"
-					
-					echo Removing Shortcut from Start Menu...
-					rd /s /q "%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\]]..ServerName..[["
-					
-					echo Removing registry entry...
-					reg delete "HKEY_LOCAL_MACHINE]].."\\"..RegKey..[[" /va /f
-					
-					echo msgbox "]]..ServerName..[[ was uninstalled successfully!" &gt; %tmp%\tmp.vbs
-					cscript /nologo %tmp%\tmp.vbs		
-					del %tmp%\tmp.vbs
-					
-					del "Uninstall.bat"
-				]], false);
-				
-				UpdateStatus("Creating entry on registry...");
-				Registry.CreateKey(HKEY_LOCAL_MACHINE, RegKey);
-				--Comments
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "DisplayName", ServerName, REG_SZ);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "Publisher", ServerName, REG_SZ);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "URLInfoAbout", URLInfoAbout, REG_SZ);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "HelpLink", HelpLink, REG_SZ);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "DisplayIcon", InstallFolder.."LC.exe", REG_SZ);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "UninstallString", InstallFolder.."Uninstall.bat", REG_SZ);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "NoModify", "00000001", REG_DWORD);
-				Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "NoRepair", "00000001", REG_DWORD);
-				
-				UpdateStatus("Installing complements...");
-				Shell.Execute("AutoPlay\\Docs\\vcredist_2010_x86.exe", "open", "/q", "", SW_SHOWNORMAL, true);
-				Shell.Execute("AutoPlay\\Docs\\dxwebsetup.exe", "open", "/q", "", SW_SHOWNORMAL, true);
-				UpdateStatus("Installation Completed!");
-				
-				if(LaunchGameAfterInstallation)then
-					Shell.Execute(InstallFolder.."LC.exe", "open", "", "", SW_SHOWNORMAL, false);
-				end
-				
-				Dialog.Message(ServerName, ServerName.." was installed successfully!", MB_OK, MB_ICONINFORMATION, MB_DEFBUTTON1);
-				
-				Application.Exit(0);
-			end
+			UpdateStatus("");
+			Paragraph.SetProperties("stage2_downloadstatus", {Alignment = 0});
+			UpdateStatus("Checking file, Please wait...");
+			TaskBarList.SetProgressState(TBPF_INDETERMINATE);
+			Button.SetVisible(this, false);
+			MultiThread.Execute("Plugin1", 1);
 		end
 	end
 elseif(State == "CANCEL")then
-	local Ret = Dialog.Message("Confirmation", "Sure you want to cancel the process?", MB_YESNO, MB_ICONINFORMATION, MB_DEFBUTTON1);
-	if(Ret == 7)then
-		Application.Exit(0);
+	local Ret = Dialog.Message("Confirmation", "Sure you want to cancel the process?", MB_YESNO, MB_ICONINFORMATION, MB_DEFBUTTON1)
+	if(Ret == 6)then
+		Cancel = (true);
 	end
 end</Script>
 <TreeStates>
@@ -1096,8 +866,8 @@ end</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>131</DesignCodeLine>
-<DesignCodeCol>4</DesignCodeCol>
+<DesignCodeLine>53</DesignCodeLine>
+<DesignCodeCol>34</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1200,8 +970,8 @@ end</Script>
 <TabIndex>-1</TabIndex>
 <AutoResize>0</AutoResize>
 <Coordinates>
-<Top>446</Top>
-<Bottom>471</Bottom>
+<Top>443</Top>
+<Bottom>468</Bottom>
 <Left>715</Left>
 <Right>765</Right>
 </Coordinates>
@@ -1312,9 +1082,9 @@ end</Script>
 <Type>2</Type>
 <Name>stage2_downloadstatus</Name>
 <VisibleAtDesignTime>1</VisibleAtDesignTime>
-<VisibleAtRunTime>0</VisibleAtRunTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
 <Locked>0</Locked>
-<Enabled>0</Enabled>
+<Enabled>1</Enabled>
 <ToolTip/>
 <Cursor>0</Cursor>
 <Group>0</Group>
@@ -1325,8 +1095,8 @@ end</Script>
 <Coordinates>
 <Top>487</Top>
 <Bottom>518</Bottom>
-<Left>230</Left>
-<Right>765</Right>
+<Left>218</Left>
+<Right>763</Right>
 </Coordinates>
 <Ratios>
 <WidthRatio>-1.000000</WidthRatio>
@@ -2795,50 +2565,280 @@ end</Script>
 <MouseClickSound/>
 </BUTTON>
 </Object>
-<HGuidelines>
-<Guideline>
-<pt>450</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>470</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>764</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>835</pt>
-<locked>0</locked>
-</Guideline>
-</HGuidelines>
-<VGuidelines>
-<Guideline>
-<pt>170</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>330</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>360</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>390</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>446</pt>
-<locked>0</locked>
-</Guideline>
-<Guideline>
-<pt>487</pt>
-<locked>0</locked>
-</Guideline>
-</VGuidelines>
+<Object>
+<Type>40</Type>
+<Name>Plugin1</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>1</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>0</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>-20</Top>
+<Bottom>-2</Bottom>
+<Left>0</Left>
+<Right>181</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>Thread_1</Name>
+<Args/>
+<Script>TaskBarList.SetProgressState(TBPF_NORMAL);
+ZipEx.Extract(InstallFolder.."temp.zip", {"*.*"}, InstallFolder, "", "ZipCallback");
+local ZipError = Application.GetLastError();
+if(ZipError ~= 0 and ZipError ~= 2608)then
+	UpdateStatus("Error");
+	Dialog.Message("FATAL ERROR", _tblErrorMessages[ZipError].."\r\nCannot continue, decompression canceled.", MB_OK, MB_ICONSTOP, MB_DEFBUTTON1);
+	Application.Exit(0);
+elseif(ZipError == 2608)then
+	Window.Close(Application.GetWndHandle(), CLOSEWND_TERMINATE);
+else
+	UpdateStatus("Deleting residue...");
+	File.Delete(InstallFolder.."temp.zip", false, false, false, nil);
+	
+	if(CreateDesktopIcon == true)then
+		UpdateStatus("Creating icon on desktop...");
+		Application.SetRedraw(true);
+		Shell.CreateShortcut(Shell.GetFolder(SHF_DESKTOP), ServerName, InstallFolder.."LC.exe", "", "", "", 0, SW_SHOWNORMAL, nil, "", START_OPTION_NO_PIN);
+	end
+			
+	if(CreateStartMenuIcon == true)then
+		UpdateStatus("Creating icon on start menu...");
+		Application.SetRedraw(true);
+		Shell.CreateShortcut(Shell.GetFolder(SHF_STARTMENU).."\\"..ServerName, ServerName, InstallFolder.."LC.exe", "", "", "", 0, SW_SHOWNORMAL, nil, "", START_OPTION_DEFAULT);
+	end
+			
+	local RegKey = ("SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"..ServerName);
+			
+	UpdateStatus("Creating Uninstall process...");
+	Application.SetRedraw(true);
+	TextFile.WriteFromString(InstallFolder.."Uninstall.bat", [[
+		@echo off
+		title ]]..ServerName..[[ Uninstaller
+		echo Stopping LC.exe...
+		taskkill /f /im LC.exe
+				
+		echo Stopping Nksp.exe...
+		taskkill /f /im Nksp.exe
+	
+		echo Removing game client files...
+		set ClientFolder=%~dp0
+	
+		cd /d %ClientFolder%
+		
+		for /F "delims=" %%i in ('dir /b') do (
+			if not "%%i"=="Uninstall.bat" (
+				rd "%%i" /s /q || del "%%i" /s /q
+				echo Deleting: %%i
+			)
+		)
+					
+		echo Removing Shortcut from Desktop...
+		del /s /q "%USERPROFILE%\Desktop\]]..ServerName..[[.lnk"
+	
+		echo Removing Shortcut from Start Menu...
+		rd /s /q "%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\]]..ServerName..[["
+				
+		echo Removing registry entry...
+		reg delete "HKEY_LOCAL_MACHINE]].."\\"..RegKey..[[" /va /f
+				
+		echo msgbox "]]..ServerName..[[ was uninstalled successfully!" &gt; %tmp%\tmp.vbs
+		cscript /nologo %tmp%\tmp.vbs		
+		del %tmp%\tmp.vbs
+		del "Uninstall.bat"
+	]], false);
+					
+	UpdateStatus("Creating entry on registry...");
+	Application.SetRedraw(true);
+	Registry.CreateKey(HKEY_LOCAL_MACHINE, RegKey);
+	--Comments
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "DisplayName", ServerName, REG_SZ);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "Publisher", ServerName, REG_SZ);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "URLInfoAbout", URLInfoAbout, REG_SZ);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "HelpLink", HelpLink, REG_SZ);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "DisplayIcon", InstallFolder.."LC.exe", REG_SZ);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "UninstallString", InstallFolder.."Uninstall.bat", REG_SZ);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "NoModify", "00000001", REG_DWORD);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "NoRepair", "00000001", REG_DWORD);
+					
+	UpdateStatus("Installing complements 1/2...");
+	Application.SetRedraw(true);
+	Shell.Execute("AutoPlay\\Docs\\vcredist_2010_x86.exe", "open", "/q", "", SW_SHOWNORMAL, true);
+	UpdateStatus("Installing complements 2/2...");
+	Application.SetRedraw(true);
+	Shell.Execute("AutoPlay\\Docs\\dxwebsetup.exe", "open", "/q", "", SW_SHOWNORMAL, true);
+	UpdateStatus("Installation Completed!");
+			
+	if(LaunchGameAfterInstallation == true)then
+		Shell.Execute(InstallFolder.."LC.exe", "open", "", "", SW_SHOWNORMAL, false);
+	end
+					
+	Dialog.Message(ServerName, ServerName.." was installed successfully!", MB_OK, MB_ICONINFORMATION, MB_DEFBUTTON1);
+					
+	Application.Exit(0);
+end</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>8</DesignCodeLine>
+<DesignCodeCol>1</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_2</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_3</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_4</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_5</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_6</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_7</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_8</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_9</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>Thread_10</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions/>
+<PLUGIN>
+<DLLFile>MultiThread\MultiThread.apo</DLLFile>
+<CustomData>Key, "NoModify", "00000001", REG_DWORD);
+	Registry.SetValue(HKEY_LOCAL_MACHINE, RegKey, "NoRepair", "00000001", REG_DWORD);
+					
+	UpdateStatus("Installing complements 1/2...");
+	Application.SetRedraw(true);
+	Shell.Execute("AutoPlay\\Docs\\vcredist_2010_x86.exe", "open", "/q", "", SW_SHOWNORMAL, trÌô….</CustomData>
+</PLUGIN>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+</Object>
+<HGuidelines/>
+<VGuidelines/>
 </Page>
 <SugDialogs/>
 <MissingTechs>
