@@ -6,7 +6,7 @@ Developed with <a href="https://www.indigorose.com/autoplay-media-studio/">Autop
 # QuickStart
 1) Take your game client files and compress it with __WinRAR__ in zip format, using the best compression method.
 2) Download Compiler.v1.zip, Extract it.
-3) Extract the content of the Resources Resources.v5.Hotfix.zip file inside the Resources Folder that comes with the compiler.
+3) Download Resources.v5.Hotfix.zip, Extact it inside the Resources Folder that comes with the __Compiler__.
 4) Execute __Compile SFX.bat__ and follow the steps.
 
 # Features
